@@ -2,108 +2,139 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <!-- 关键：禁止缩放，适配手机屏幕 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>路</title>
     <style>
+        /* 全局重置 */
+        * {
+            box-sizing: border-box;
+            touch-action: none; /* 禁止浏览器默认的触摸行为（如滑动翻页） */
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background-color: #222;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            background-color: #111;
             color: white;
             font-family: sans-serif;
+            overflow: hidden; /* 禁止页面滚动 */
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
+
+        /* 游戏画布样式 */
         canvas {
-            border: 4px solid #444;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
             background-color: #000;
+            border: 2px solid #444;
+            box-shadow: 0 0 15px rgba(0,0,0,0.8);
+            /* 响应式核心：最大宽度100%，高度自动保持比例 */
+            max-width: 95vw; 
+            max-height: 60vh; /* 给底部按钮留出空间 */
+            width: auto;
+            height: auto;
+            display: block;
+            margin: 0 auto;
         }
+
+        /* 顶部提示文字 */
         .tips {
             position: absolute;
-            top: 20px;
+            top: 10px;
+            width: 100%;
             text-align: center;
-            pointer-events: none;
+            pointer-events: none; /* 文字不阻挡点击 */
+            z-index: 10;
+            text-shadow: 1px 1px 2px black;
         }
-    </style>
-</head>
-<body>
 
-    <div class="tips">
-        <h2>路</h2>
-        <p>按 [D] 向右前行 | 按 [A] 向左回头 f5重开</p>
-        <p>注意：阴影值过高会导致游戏结束</p>
-    </div>
+        .tips h2 {
+            margin: 0 0 5px 0;
+            font-size: 1.2rem;
+        }
 
-    <canvas id="gameCanvas"></canvas>
-        <!-- 游戏画布 -->
-    <canvas id="gameCanvas"></canvas>
+        .tips p {
+            margin: 2px 0;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
 
-    <!-- 【新增】手机端虚拟控制器 -->
-    <div id="mobile-controls">
-        <div class="touch-btn left-btn" id="btn-left">←</div>
-        <div class="touch-btn right-btn" id="btn-right">→</div>
-        <div class="touch-btn action-btn" id="btn-action">确认/下一页</div>
-    </div>
+        /* 默认隐藏移动端控件 */
+        #mobile-controls {
+            display: none;
+        }
 
-    <div class="tips">
-        <h2>人生历程</h2>
-        <p class="desktop-only">按 [D] 向右 | 按 [A] 向左</p>
-        <p class="mobile-only">点击屏幕左右按钮控制</p>
-    </div>
-
-    <style>
-        /* 隐藏桌面端的提示，只在手机显示 */
-        .mobile-only { display: none; }
+        /* --- 手机端专属样式 (屏幕宽度小于 800px) --- */
         @media (max-width: 800px) {
+            /* 切换提示文字显示 */
             .desktop-only { display: none; }
             .mobile-only { display: block; }
-            
-            /* 移动端控制器样式 */
+
+            /* 显示虚拟控制器容器 */
             #mobile-controls {
-                position: absolute;
-                bottom: 20px;
-                width: 100%;
                 display: flex;
+                position: fixed; /* 固定在整个屏幕底部 */
+                bottom: 20px;
+                left: 0;
+                width: 100%;
                 justify-content: space-between;
-                padding: 0 40px;
-                box-sizing: border-box;
-                pointer-events: none; /* 让点击穿透到按钮上 */
-                user-select: none;
-                -webkit-user-select: none;
+                padding: 0 30px;
+                z-index: 9999; /* 确保在最上层 */
+                pointer-events: none; /* 容器本身不挡点击，让子元素接收点击 */
             }
+
+            /* 按钮通用样式 */
             .touch-btn {
                 width: 70px;
                 height: 70px;
-                background: rgba(255, 255, 255, 0.2);
-                border: 2px solid rgba(255, 255, 255, 0.5);
+                background: rgba(255, 255, 255, 0.15);
+                border: 2px solid rgba(255, 255, 255, 0.4);
                 border-radius: 50%;
                 color: white;
-                font-size: 30px;
+                font-size: 32px;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                pointer-events: auto; /* 按钮本身可点击 */
+                pointer-events: auto; /* 按钮本身可以点击 */
                 backdrop-filter: blur(4px);
-                touch-action: manipulation; /* 防止双击缩放 */
+                user-select: none;
+                -webkit-user-select: none;
+                transition: transform 0.1s, background 0.1s;
             }
+
+            /* 按钮按下效果 */
             .touch-btn:active {
-                background: rgba(255, 255, 255, 0.5);
-                transform: scale(0.95);
+                background: rgba(255, 255, 255, 0.4);
+                transform: scale(0.92);
             }
+
+            /* 确认/动作按钮特殊样式 */
             .action-btn {
-                position: absolute;
-                right: 40px;
-                bottom: 100px; /* 放在右上方一点，避免误触 */
+                position: fixed; /* 独立定位，放在右侧上方一点 */
+                bottom: 100px;
+                right: 30px;
                 width: 60px;
                 height: 60px;
                 font-size: 14px;
-                background: rgba(255, 215, 0, 0.3);
+                background: rgba(255, 215, 0, 0.25);
                 border-color: gold;
+                color: #ffd700;
+                font-weight: bold;
             }
+            
+            .action-btn:active {
+                background: rgba(255, 215, 0, 0.6);
+            }
+
             /* 横屏优化 */
             @media (orientation: landscape) {
+                canvas {
+                    max-height: 85vh; /* 横屏时游戏画面可以更大 */
+                }
                 #mobile-controls {
                     bottom: 10px;
                     padding: 0 20px;
@@ -119,16 +150,40 @@
                 }
             }
         }
-        /* 默认隐藏移动端控件，只有小屏幕才显示 */
-        #mobile-controls { display: none; }
-        @media (max-width: 800px) {
-            #mobile-controls { display: flex; }
-        }
     </style>
+</head>
+<body>
 
-    <!-- 引入 JS -->
-    <script src="game.js"></script>
-    <!-- 引入刚才的 JS 文件 -->
+    <!-- 顶部提示 -->
+    <div class="tips">
+        <h2>路</h2>
+        <p class="desktop-only">按 [A] 向左 | 按 [D] 向右 | F5 重开</p>
+        <p class="mobile-only">点击下方按钮控制方向</p>
+        <p style="font-size: 0.8rem; color: #888;">注意：阴影值过高会导致游戏结束</p>
+    </div>
+
+    <!-- 游戏画布 (只保留一个) -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- 手机端虚拟控制器 -->
+    <div id="mobile-controls">
+        <div class="touch-btn left-btn" id="btn-left">←</div>
+        <div class="touch-btn right-btn" id="btn-right">→</div>
+        <!-- 动作按钮单独定位，不放在 flex 流里，避免挤压 -->
+    </div>
+    
+    <!-- 动作按钮单独放在外面，方便定位 -->
+    <div class="touch-btn action-btn" id="btn-action" style="display:none;">确认</div>
+    <!-- 上面这个在CSS媒体查询里会生效显示，这里先隐藏以防桌面端显示 -->
+    
+    <script>
+        // 简单脚本：在移动端强制显示动作按钮，桌面端隐藏
+        if (window.innerWidth <= 800) {
+            document.getElementById('btn-action').style.display = 'flex';
+        }
+    </script>
+
+    <!-- 引入游戏逻辑 (只加载一次) -->
     <script src="game.js"></script>
 </body>
 </html>
